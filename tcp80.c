@@ -1,16 +1,14 @@
 #include <u.h>
 #include <libc.h>
-#include <auth.h>
 #include <bio.h>
 
 #define PATHMAX	1024
-#define LINEMAX 1024
-#define RESMAX  8192
+#define LINEMAX	1024
+#define RESMAX	8192
 
 typedef struct Mimetype Mimetype;
 typedef struct Req Req;
 typedef struct Res Res;
-typedef void Method(Req*);
 
 struct Mimetype
 {
@@ -100,7 +98,7 @@ lookupmime(char ext[])
 	int i;
 
 	if(ext == nil)
-		goto Default:
+		goto Default;
 
 	for(i = 0; i < nelem(mimetypes); i++){
 		t = mimetypes+i;
@@ -185,7 +183,6 @@ dispatch(void)
 	}else{
 		res.len = seek(fd, 0, 2);
 		seek(fd, 0, 0);
-
 		sendheader(&res);
 		while((n = read(fd, rbuf, RESMAX)) > 0)
 			write(0, rbuf, n);
