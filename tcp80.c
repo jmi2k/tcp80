@@ -177,6 +177,7 @@ dispatch(void)
 
 	if((fd = open(req.uri, OREAD)) < 0){
 		res.status = NotFound;
+		res.mime = "text/plain";
 		res.len = strlen(nstatus[res.status]);
 		sendheader(&res);
 		print("%s", nstatus[res.status]);
