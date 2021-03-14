@@ -221,7 +221,8 @@ main(int argc, char *argv[])
 
 	/* not bullet-proof but close enough */
 	rfork(RFNAMEG|RFCENVG);
-	bind(root, "/", MREPL);
+	if(bind(root, "/", MREPL) < 0)
+		sysfatal("bind: %r");
 	rfork(RFNOMNT);
 
 	status = recvheader(&req);
