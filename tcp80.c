@@ -166,10 +166,10 @@ sendheader(Res *res)
 void
 serve(Req *req, int status)
 {
+	static uchar rbuf[RESMAX];
 	Res res;
 	int fd;
 	vlong n;
-	uchar rbuf[RESMAX];
 
 	res.status = status;
 	res.mime = lookupmime(strrchr(req->uri, '.'));
@@ -200,8 +200,8 @@ usage(void)
 void
 main(int argc, char *argv[])
 {
+	static uchar lbuf[LINEMAX];
 	Req req;
-	uchar lbuf[LINEMAX];
 	char *root;
 	int status;
 
