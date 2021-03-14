@@ -54,15 +54,15 @@ int lookupmethod(char[]);
 char* lookupmime(char[]);
 int validateuri(char[], int);
 int recvheader(Req*);
-void sendheader(Res *res);
-void dispatch(void);
+void sendheader(Res*);
+void serve(Req*, int);
 void usage(void);
 
 char *nstatus[] = {
 	[Ok]					= "OK",
 	[PartialContent]		= "Partial Content",
 	[MovedPermanently]		= "Moved Permanently",
-	[BadRequest]			= "BadRequest",
+	[BadRequest]			= "Bad Request",
 	[Forbidden]				= "Forbidden",
 	[NotFound]				= "Not Found",
 	[MethodNotAllowed]		= "Method Not Allowed",
@@ -164,18 +164,17 @@ sendheader(Res *res)
 }
 
 void
-dispatch(void)
+serve(Req *req, int status)
 {
-	Req req;
 	Res res;
 	int fd;
 	vlong n;
 	uchar rbuf[RESMAX];
 
-	res.status = recvheader(&req);
-	res.mime = lookupmime(strrchr(req.uri, '.'));
+	res.status = status;
+	res.mime = lookupmime(strrchr(req->uri, '.'));
 
-	if((fd = open(req.uri, OREAD)) < 0){
+	if((fd = open(req->uri, OREAD)) < 0){
 		res.status = NotFound;
 		res.mime = "text/plain";
 		res.len = strlen(nstatus[res.status]);
@@ -187,6 +186,7 @@ dispatch(void)
 		sendheader(&res);
 		while((n = read(fd, rbuf, RESMAX)) > 0)
 			write(0, rbuf, n);
+		close(fd);
 	}
 }
 
@@ -200,8 +200,10 @@ usage(void)
 void
 main(int argc, char *argv[])
 {
+	Req req;
 	uchar lbuf[LINEMAX];
 	char *root;
+	int status;
 
 	root = "/sys/www";
 	ARGBEGIN{
@@ -222,6 +224,8 @@ main(int argc, char *argv[])
 	bind(root, "/", MREPL);
 	rfork(RFNOMNT);
 
-	dispatch();
+	status = recvheader(&req);
+	serve(&req, status);
+
 	Bterm(&in);
 }
