@@ -218,16 +218,10 @@ main(int argc, char *argv[])
 	if(Binits(&in, 0, OREAD, lbuf, LINEMAX) == Beof)
 		sysfatal("Binit: %r");
 
-#ifdef UNDEF
-	rfork(RFCNAMEG|RFCENVG);
-	/* here the new namespace should be built somehow */
-	USED(root);
-	rfork(RFNOMNT);
-#else
-	/* solution until i know how to setup the namespace */
-	rfork(RFNAMEG);
+	/* not bullet-proof but close enough */
+	rfork(RFNAMEG|RFCENVG);
 	bind(root, "/", MREPL);
-#endif
+	rfork(RFNOMNT);
 
 	dispatch();
 	Bterm(&in);
