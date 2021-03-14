@@ -27,6 +27,7 @@ struct Res
 	int		status;
 	char*	mime;
 	vlong	len;
+	int		keepalive;
 };
 
 enum
@@ -55,7 +56,7 @@ char* lookupmime(char[]);
 int validateuri(char[], int);
 int recvheader(Req*);
 void sendheader(Res*);
-void serve(Req*, int);
+int serve(Req*, int);
 void usage(void);
 
 char *nstatus[] = {
@@ -166,7 +167,7 @@ sendheader(Res *res)
 		server);
 }
 
-void
+int
 serve(Req *req, int status)
 {
 	static uchar rbuf[RESMAX];
@@ -176,11 +177,13 @@ serve(Req *req, int status)
 
 	res.status = status;
 	res.mime = lookupmime(strrchr(req->uri, '.'));
+	res.keepalive = status == Ok;
 
 	if((fd = open(req->uri, OREAD)) < 0){
 		res.status = NotFound;
 		res.mime = "text/plain";
 		res.len = strlen(nstatus[res.status]);
+		res.keepalive = 0;
 		sendheader(&res);
 		print("%s", nstatus[res.status]);
 	}else{
@@ -191,6 +194,8 @@ serve(Req *req, int status)
 			write(0, rbuf, n);
 		close(fd);
 	}
+
+	return res.keepalive;
 }
 
 void
@@ -206,7 +211,7 @@ main(int argc, char *argv[])
 	static uchar lbuf[LINEMAX];
 	Req req;
 	char *root;
-	int status;
+	int status, keepalive;
 
 	root = "/sys/www";
 	ARGBEGIN{
@@ -228,8 +233,10 @@ main(int argc, char *argv[])
 		sysfatal("bind: %r");
 	rfork(RFNOMNT);
 
-	status = recvheader(&req);
-	serve(&req, status);
+	do{
+		status = recvheader(&req);
+		keepalive = serve(&req, status);
+	}while(keepalive);
 
 	Bterm(&in);
 }
