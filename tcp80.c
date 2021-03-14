@@ -203,16 +203,15 @@ main(int argc, char *argv[])
 	uchar lbuf[LINEMAX];
 	char *root;
 
+	root = "/sys/www";
 	ARGBEGIN{
 	default:
 		usage();
 	}ARGEND
 
-	if(argc == 0)
-		root = "/sys/www";
-	else if(argc == 1)
+	if(argc == 1)
 		root = argv[0];
-	else
+	else if(argc > 1)
 		usage();
 
 	if(Binits(&in, 0, OREAD, lbuf, LINEMAX) == Beof)
