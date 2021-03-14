@@ -155,16 +155,24 @@ recvheader(Req *req)
 void
 sendheader(Res *res)
 {
+	char *connection;
+
+	connection = res->keepalive
+		? ""
+		: "Connection: close\r\n";
+
 	print(
 		"HTTP/1.1 %d %s\r\n"
 		"Content-Type: %s\r\n"
 		"Content-Length: %lld\r\n"
 		"Server: %s\r\n"
+		"%s"
 		"\r\n",
 		res->status, nstatus[res->status],
 		res->mime,
 		res->len,
-		server);
+		server,
+		connection);
 }
 
 int
