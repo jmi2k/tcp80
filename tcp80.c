@@ -193,7 +193,7 @@ dispatch(void)
 void
 usage(void)
 {
-	fprint(2, "usage: %s [-r webroot]\n", argv0);
+	fprint(2, "usage: %s [webroot]\n", argv0);
 	exits("usage");
 }
 
@@ -203,17 +203,18 @@ main(int argc, char *argv[])
 	uchar lbuf[LINEMAX];
 	char *root;
 
-	root = "/sys/www";
 	ARGBEGIN{
-	case 'r':
-		root = EARGF(usage());
-		break;
 	default:
 		usage();
 	}ARGEND
 
-	if(argc != 0)
+	if(argc == 0)
+		root = "/sys/www";
+	else if(argc == 1)
+		root = argv[0];
+	else
 		usage();
+
 	if(Binits(&in, 0, OREAD, lbuf, LINEMAX) == Beof)
 		sysfatal("Binit: %r");
 
