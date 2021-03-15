@@ -44,6 +44,7 @@ enum
 	UriTooLong			= 414,
 	RequestTooLarge		= 431,
 	InternalServerError = 500,
+	NotImplemented		= 501,
 };
 
 enum
@@ -71,6 +72,7 @@ char *nstatus[] = {
 	[UriTooLong]			= "URI Too Long",
 	[RequestTooLarge]		= "Request Too Large",
 	[InternalServerError]	= "Internal Server Error",
+	[NotImplemented]		= "Not Implemented",
 };
 
 char *nmethods[] = {
@@ -103,7 +105,6 @@ lookupmime(char ext[])
 
 	for(i = 0; i < nelem(mimetypes); i++){
 		t = mimetypes+i;
-
 		if(strcmp(t->ext, ext) == 0)
 			return t->mime;
 	}
@@ -127,7 +128,6 @@ recvheader(Req *req)
 	int len, method;
 
 	alarm(timeout);
-
 	if((line = Brdline(&in, '\n')) == nil)		/* no line */
 		return BadRequest;
 
@@ -146,8 +146,8 @@ recvheader(Req *req)
 		return BadRequest;
 	if(cistrcmp(http, "HTTP/1.1") != 0)			/* invalid HTTP version */
 		return BadRequest;
-	if(!(method = lookupmethod(nmethod)) < 0)	/* invalid method */
-		return BadRequest;
+	if(!(method = lookupmethod(nmethod)) < 0)	/* unknown method */
+		return NotImplemented;
 	if(!validateuri(uri, method))				/* invalid uri */
 		return BadRequest;
 
