@@ -198,24 +198,29 @@ serve(Req *req, int status)
 
 	res.status = status;
 	res.mime = lookupmime(strrchr(req->uri, '.'));
-	res.keepalive = status == Ok;
 
+	if(status != Ok)
+		goto Error;
 	if((fd = open(req->uri, OREAD)) < 0){
 		res.status = NotFound;
-		res.mime = "text/plain";
-		res.len = strlen(nstatus[res.status]);
-		res.keepalive = 0;
-		sendheader(&res);
-		write(1, nstatus[res.status], res.len);
-	}else{
-		res.len = seek(fd, 0, 2);
-		seek(fd, 0, 0);
-		sendheader(&res);
-		while((n = read(fd, rbuf, RESMAX)) > 0)
-			write(1, rbuf, n);
-		close(fd);
-	}
+		goto Error;
+	}	
 
+	res.len = seek(fd, 0, 2);
+	res.keepalive = 1;
+	seek(fd, 0, 0);
+	sendheader(&res);
+	while((n = read(fd, rbuf, RESMAX)) > 0)
+		write(1, rbuf, n);
+	close(fd);
+	return res.keepalive;
+
+Error:
+	res.mime = "text/plain";
+	res.len = strlen(nstatus[res.status]);
+	res.keepalive = 0;
+	sendheader(&res);
+	write(1, nstatus[res.status], res.len);
 	return res.keepalive;
 }
 
