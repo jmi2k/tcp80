@@ -124,15 +124,18 @@ int
 recvheader(Req *req)
 {
 	char *line, *nmethod, *uri, *http;
-	int method;
+	int len, method;
 
 	alarm(timeout);
 
 	if((line = Brdline(&in, '\n')) == nil)		/* no line */
 		return BadRequest;
-	if(line[Blinelen(&in)-1] != '\n')			/* line too long */
+
+	len = Blinelen(&in);
+	if(line[len-1] != '\n')						/* line too long */
 		return UriTooLong;
 
+	line[len-1] = '\0';
 	if(!(nmethod = strtok(line, " ")))			/* no method */
 		return BadRequest;
 	if(!(uri = strtok(nil, " ")))				/* no uri */
