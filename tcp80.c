@@ -123,7 +123,7 @@ validateuri(char path[], int method)
 int
 recvheader(Req *req)
 {
-	char *line, *nmethod, *uri, *http;
+	char *line, *nmethod, *uri, *http, *end;
 	int len, method;
 
 	alarm(timeout);
@@ -140,7 +140,9 @@ recvheader(Req *req)
 		return BadRequest;
 	if(!(uri = strtok(nil, " ")))				/* no uri */
 		return BadRequest;
-	if(!(http = strtok(nil, "\n\r")))			/* no HTTP version */
+	if(!(http = strtok(nil, "\r")))				/* no HTTP version */
+		return BadRequest;
+	if((end = strtok(nil, "")) && *end)			/* garbage after \r */
 		return BadRequest;
 	if(cistrcmp(http, "HTTP/1.1") != 0)			/* invalid HTTP version */
 		return BadRequest;
