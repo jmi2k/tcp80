@@ -201,13 +201,13 @@ serve(Req *req, int status)
 		res.len = strlen(nstatus[res.status]);
 		res.keepalive = 0;
 		sendheader(&res);
-		print("%s", nstatus[res.status]);
+		write(1, nstatus[res.status], res.len);
 	}else{
 		res.len = seek(fd, 0, 2);
 		seek(fd, 0, 0);
 		sendheader(&res);
 		while((n = read(fd, rbuf, RESMAX)) > 0)
-			write(0, rbuf, n);
+			write(1, rbuf, n);
 		close(fd);
 	}
 
