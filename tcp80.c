@@ -146,6 +146,14 @@ recvheader(Req *req)
 	if(!validateuri(uri, method))				/* invalid uri */
 		return BadRequest;
 
+	/* TODO: make use of request headers */
+	do{
+		if((line = Brdline(&in, '\n')) == nil)	/* no line */
+			return BadRequest;
+		if(line[Blinelen(&in)-1] != '\n')		/* line too long */
+			return InternalServerError;
+	}while(!(line[0] == '\n' || line[0] == '\r' && line[1] == '\n'));
+
 	alarm(0);
 	req->method = method;
 	strncpy(req->uri, uri, PATHMAX);
