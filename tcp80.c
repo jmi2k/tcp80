@@ -50,6 +50,7 @@ enum
 enum
 {
 	Get,
+	Head,
 };
 
 int lookupmethod(char[]);
@@ -77,6 +78,7 @@ char *nstatus[] = {
 
 char *nmethods[] = {
 	[Get]	= "GET",
+	[Head]	= "HEAD",
 };
 
 #include "config.h"
@@ -214,8 +216,9 @@ serve(Req *req, int status)
 	res.keepalive = 1;
 	seek(fd, 0, 0);
 	sendheader(&res);
-	while((n = read(fd, rbuf, RESMAX)) > 0)
-		write(1, rbuf, n);
+	if(req->method == Get)
+		while((n = read(fd, rbuf, RESMAX)) > 0)
+			write(1, rbuf, n);
 	close(fd);
 	return res.keepalive;
 
