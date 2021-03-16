@@ -81,6 +81,7 @@ char *nmethods[] = {
 
 #include "config.h"
 Biobufhdr in;
+char ebuf[ERRMAX];
 
 int
 lookupmethod(char method[])
@@ -202,9 +203,12 @@ serve(Req *req, int status)
 	if(status != Ok)
 		goto Error;
 	if((fd = open(req->uri, OREAD)) < 0){
-		res.status = NotFound;
+		rerrstr(ebuf, ERRMAX);
+		res.status = strstr(ebuf, "permission denied") != nil
+			? Forbidden
+			: NotFound;
 		goto Error;
-	}	
+	}
 
 	res.len = seek(fd, 0, 2);
 	res.keepalive = 1;
