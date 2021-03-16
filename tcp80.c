@@ -33,16 +33,10 @@ struct Res
 enum
 {
 	Ok					= 200,
-	PartialContent		= 206,
-	MovedPermanently	= 301,
-	NotModified			= 304,
 	BadRequest			= 400,
 	Forbidden			= 403,
 	NotFound			= 404,
-	MethodNotAllowed	= 405,
-	RequestTimeout		= 408,
 	UriTooLong			= 414,
-	RequestTooLarge		= 431,
 	InternalServerError = 500,
 	NotImplemented		= 501,
 };
@@ -63,15 +57,10 @@ void usage(void);
 
 char *nstatus[] = {
 	[Ok]					= "OK",
-	[PartialContent]		= "Partial Content",
-	[MovedPermanently]		= "Moved Permanently",
 	[BadRequest]			= "Bad Request",
 	[Forbidden]				= "Forbidden",
 	[NotFound]				= "Not Found",
-	[MethodNotAllowed]		= "Method Not Allowed",
-	[RequestTimeout]		= "Request Timeout",
 	[UriTooLong]			= "URI Too Long",
-	[RequestTooLarge]		= "Request Too Large",
 	[InternalServerError]	= "Internal Server Error",
 	[NotImplemented]		= "Not Implemented",
 };
