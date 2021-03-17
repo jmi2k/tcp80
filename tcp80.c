@@ -81,8 +81,10 @@ Method methods[] = {
 };
 
 #include "config.h"
+
 Biobufhdr in;
 char ebuf[ERRMAX];
+uchar rbuf[RESMAX];
 
 Method*
 lookupmethod(char method[])
@@ -159,9 +161,9 @@ recvheader(Req *req)
 
 	/* TODO: make use of request headers */
 	do{
-		if((line = Brdline(&in, '\n')) == nil)		/* no line */
+		if((line = Brdline(&in, '\n')) == nil)	/* no line */
 			return BadRequest;
-		if(line[Blinelen(&in)-1] != '\n')			/* line too long */
+		if(line[Blinelen(&in)-1] != '\n')		/* line too long */
 			return InternalServerError;
 	}while(!(line[0] == '\n' || line[0] == '\r' && line[1] == '\n'));
 
@@ -213,7 +215,6 @@ dostatus(Req *req, Res *res)
 int
 doget(Req *req, Res *res)
 {
-	static uchar rbuf[RESMAX];
 	int fd;
 	vlong n;
 
