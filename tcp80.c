@@ -7,6 +7,7 @@
 #define RESMAX	8192
 
 typedef struct Mimetype Mimetype;
+typedef struct Method Method;
 typedef struct Req Req;
 typedef struct Res Res;
 
@@ -16,9 +17,15 @@ struct Mimetype
 	char*	mime;
 };
 
+struct Method
+{
+	char*	name;
+	int		(*f)(Req*, Res*);
+};
+
 struct Req
 {
-	int		method;
+	Method*	method;
 	char	uri[PATHMAX];
 };
 
@@ -47,12 +54,14 @@ enum
 	Head,
 };
 
-int lookupmethod(char[]);
+Method* lookupmethod(char[]);
 char* lookupmime(char[]);
-int validateuri(char[], int);
+int validateuri(char[], Method*);
 int recvheader(Req*);
 void sendheader(Res*);
-int dostatus(Res*);
+int dostatus(Req*, Res*);
+int doget(Req*, Res*);
+int dohead(Req*, Res*);
 int serve(Req*, int);
 void usage(void);
 
@@ -66,25 +75,28 @@ char *nstatus[] = {
 	[NotImplemented]		= "Not Implemented",
 };
 
-char *nmethods[] = {
-	[Get]	= "GET",
-	[Head]	= "HEAD",
+Method methods[] = {
+	[Get]	= { "GET",	doget },
+	[Head]	= { "HEAD",	dohead },
 };
 
 #include "config.h"
 Biobufhdr in;
 char ebuf[ERRMAX];
 
-int
+Method*
 lookupmethod(char method[])
 {
+	Method *m;
 	int i;
 
-	for(i = 0; i < nelem(nmethods); i++)
-		if(cistrcmp(nmethods[i], method) == 0)
-			return i;
+	for(i = 0; i < nelem(methods); i++){
+		m = methods+i;
+		if(cistrcmp(m->name, method) == 0)
+			return m;
+	}
 
-	return -1;
+	return nil;
 }
 
 char*
@@ -107,7 +119,7 @@ Default:
 }
 
 int
-validateuri(char path[], int method)
+validateuri(char path[], Method *method)
 {
 	USED(path);
 	USED(method);
@@ -117,8 +129,9 @@ validateuri(char path[], int method)
 int
 recvheader(Req *req)
 {
+	Method *method;
 	char *line, *nmethod, *uri, *http, *end;
-	int len, method;
+	int len;
 
 	alarm(timeout);
 	if((line = Brdline(&in, '\n')) == nil)		/* no line */
@@ -139,16 +152,16 @@ recvheader(Req *req)
 		return BadRequest;
 	if(cistrcmp(http, "HTTP/1.1") != 0)			/* invalid HTTP version */
 		return BadRequest;
-	if(!(method = lookupmethod(nmethod)) < 0)	/* unknown method */
+	if((method = lookupmethod(nmethod)) == nil)	/* unknown method */
 		return NotImplemented;
 	if(!validateuri(uri, method))				/* invalid uri */
 		return BadRequest;
 
 	/* TODO: make use of request headers */
 	do{
-		if((line = Brdline(&in, '\n')) == nil)	/* no line */
+		if((line = Brdline(&in, '\n')) == nil)		/* no line */
 			return BadRequest;
-		if(line[Blinelen(&in)-1] != '\n')		/* line too long */
+		if(line[Blinelen(&in)-1] != '\n')			/* line too long */
 			return InternalServerError;
 	}while(!(line[0] == '\n' || line[0] == '\r' && line[1] == '\n'));
 
@@ -182,10 +195,11 @@ sendheader(Res *res)
 }
 
 int
-dostatus(Res *res)
+dostatus(Req *req, Res *res)
 {
 	char *body;
 
+	USED(req);
 	body = nstatus[res->status];
 	res->mime = "text/plain";
 	res->len = strlen(body);
@@ -197,35 +211,66 @@ dostatus(Res *res)
 }
 
 int
-serve(Req *req, int status)
+doget(Req *req, Res *res)
 {
 	static uchar rbuf[RESMAX];
-	Res res;
 	int fd;
 	vlong n;
 
-	res.status = status;
-	res.mime = lookupmime(strrchr(req->uri, '.'));
-
-	if(status != Ok)
-		dostatus(&res);
 	if((fd = open(req->uri, OREAD)) < 0){
 		rerrstr(ebuf, ERRMAX);
-		res.status = strstr(ebuf, "permission denied") != nil
+		res->status = strstr(ebuf, "permission denied") != nil
 			? Forbidden
 			: NotFound;
-		return dostatus(&res);
+		return dostatus(req, res);
 	}
 
-	res.len = seek(fd, 0, 2);
-	res.keepalive = 1;
+	res->mime = lookupmime(strrchr(req->uri, '.'));
+	res->len = seek(fd, 0, 2);
+	res->keepalive = 1;
+
 	seek(fd, 0, 0);
-	sendheader(&res);
-	if(req->method == Get)
-		while((n = read(fd, rbuf, RESMAX)) > 0)
-			write(1, rbuf, n);
+	sendheader(res);
+	while((n = read(fd, rbuf, RESMAX)) > 0)
+		write(1, rbuf, n);
 	close(fd);
-	return res.keepalive;
+
+	return res->keepalive;
+}
+
+int
+dohead(Req* req, Res *res)
+{
+	int fd;
+
+	if((fd = open(req->uri, OREAD)) < 0){
+		rerrstr(ebuf, ERRMAX);
+		res->status = strstr(ebuf, "permission denied") != nil
+			? Forbidden
+			: NotFound;
+		return dostatus(req, res);
+	}
+
+	res->mime = lookupmime(strrchr(req->uri, '.'));
+	res->len = seek(fd, 0, 2);
+	res->keepalive = 1;
+
+	seek(fd, 0, 0);
+	sendheader(res);
+	close(fd);
+
+	return res->keepalive;
+}
+
+int
+serve(Req *req, int status)
+{
+	Res res;
+
+	res.status = status;
+	return status == Ok
+		? req->method->f(req, &res)
+		: dostatus(req, &res);
 }
 
 void
