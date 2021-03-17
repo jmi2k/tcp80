@@ -54,16 +54,16 @@ enum
 	Head,
 };
 
-Method* lookupmethod(char[]);
-char* lookupmime(char[]);
-int validateuri(char[], Method*);
-int recvheader(Req*);
-void sendheader(Res*);
-int dostatus(Req*, Res*);
-int doget(Req*, Res*);
-int dohead(Req*, Res*);
-int serve(Req*, int);
-void usage(void);
+Method*	lookupmethod(char[]);
+char*	lookupmime(char[]);
+int		validateuri(char[], Method*);
+int		recvheader(Req*);
+void	sendheader(Res*);
+int		dostatus(Req*, Res*);
+int		doget(Req*, Res*);
+int		dohead(Req*, Res*);
+int		serve(Req*, int);
+void	usage(void);
 
 char *nstatus[] = {
 	[Ok]					= "OK",
