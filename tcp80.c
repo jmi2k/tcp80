@@ -52,6 +52,7 @@ char* lookupmime(char[]);
 int validateuri(char[], int);
 int recvheader(Req*);
 void sendheader(Res*);
+int dostatus(Res*);
 int serve(Req*, int);
 void usage(void);
 
@@ -181,6 +182,21 @@ sendheader(Res *res)
 }
 
 int
+dostatus(Res *res)
+{
+	char *body;
+
+	body = nstatus[res->status];
+	res->mime = "text/plain";
+	res->len = strlen(body);
+	res->keepalive = 0;
+	sendheader(res);
+	write(1, body, res->len);
+
+	return res->keepalive;
+}
+
+int
 serve(Req *req, int status)
 {
 	static uchar rbuf[RESMAX];
@@ -192,13 +208,13 @@ serve(Req *req, int status)
 	res.mime = lookupmime(strrchr(req->uri, '.'));
 
 	if(status != Ok)
-		goto Error;
+		dostatus(&res);
 	if((fd = open(req->uri, OREAD)) < 0){
 		rerrstr(ebuf, ERRMAX);
 		res.status = strstr(ebuf, "permission denied") != nil
 			? Forbidden
 			: NotFound;
-		goto Error;
+		return dostatus(&res);
 	}
 
 	res.len = seek(fd, 0, 2);
@@ -209,14 +225,6 @@ serve(Req *req, int status)
 		while((n = read(fd, rbuf, RESMAX)) > 0)
 			write(1, rbuf, n);
 	close(fd);
-	return res.keepalive;
-
-Error:
-	res.mime = "text/plain";
-	res.len = strlen(nstatus[res.status]);
-	res.keepalive = 0;
-	sendheader(&res);
-	write(1, nstatus[res.status], res.len);
 	return res.keepalive;
 }
 
