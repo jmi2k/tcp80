@@ -33,7 +33,7 @@ struct Res
 {
 	int		status;
 	char*	mime;
-	vlong	len;
+	vlong	length;
 	int		keepalive;
 };
 
@@ -59,9 +59,10 @@ char*	lookupmime(char[]);
 int		validateuri(char[], Method*);
 int		recvheader(Req*);
 void	sendheader(Res*);
-int		dostatus(Req*, Res*);
 int		doget(Req*, Res*);
 int		dohead(Req*, Res*);
+int		dostatus(Req*, Res*);
+int		peek(Req*, Res*, int);
 int		serve(Req*, int);
 void	usage(void);
 
@@ -191,9 +192,21 @@ sendheader(Res *res)
 		"\r\n",
 		res->status, nstatus[res->status],
 		res->mime,
-		res->len,
+		res->length,
 		server,
 		connection);
+}
+
+int
+doget(Req *req, Res *res)
+{
+	return peek(req, res, 1);
+}
+
+int
+dohead(Req *req, Res *res)
+{
+	return peek(req, res, 0);
 }
 
 int
@@ -204,16 +217,15 @@ dostatus(Req *req, Res *res)
 	USED(req);
 	body = nstatus[res->status];
 	res->mime = "text/plain";
-	res->len = strlen(body);
-	res->keepalive = 0;
+	res->length = strlen(body);
 	sendheader(res);
-	write(1, body, res->len);
+	write(1, body, res->length);
 
 	return res->keepalive;
 }
 
 int
-doget(Req *req, Res *res)
+peek(Req *req, Res *res, int send)
 {
 	int fd;
 	vlong n;
@@ -223,43 +235,20 @@ doget(Req *req, Res *res)
 		res->status = strstr(ebuf, "permission denied") != nil
 			? Forbidden
 			: NotFound;
+		res->keepalive = 0;
 		return dostatus(req, res);
 	}
 
 	res->mime = lookupmime(strrchr(req->uri, '.'));
-	res->len = seek(fd, 0, 2);
+	res->length = d->length;
 	res->keepalive = 1;
 
-	seek(fd, 0, 0);
 	sendheader(res);
-	while((n = read(fd, rbuf, RESMAX)) > 0)
-		write(1, rbuf, n);
+	if(send)
+		while((n = read(fd, rbuf, RESMAX)) > 0)
+			write(1, rbuf, n);
+
 	close(fd);
-
-	return res->keepalive;
-}
-
-int
-dohead(Req* req, Res *res)
-{
-	int fd;
-
-	if((fd = open(req->uri, OREAD)) < 0){
-		rerrstr(ebuf, ERRMAX);
-		res->status = strstr(ebuf, "permission denied") != nil
-			? Forbidden
-			: NotFound;
-		return dostatus(req, res);
-	}
-
-	res->mime = lookupmime(strrchr(req->uri, '.'));
-	res->len = seek(fd, 0, 2);
-	res->keepalive = 1;
-
-	seek(fd, 0, 0);
-	sendheader(res);
-	close(fd);
-
 	return res->keepalive;
 }
 
@@ -269,6 +258,7 @@ serve(Req *req, int status)
 	Res res;
 
 	res.status = status;
+	res.keepalive = 0;
 	return status == Ok
 		? req->method->f(req, &res)
 		: dostatus(req, &res);
