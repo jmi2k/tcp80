@@ -227,6 +227,7 @@ dostatus(Req *req, Res *res)
 int
 peek(Req *req, Res *res, int send)
 {
+	Dir *d;
 	int fd;
 	vlong n;
 
@@ -239,9 +240,18 @@ peek(Req *req, Res *res, int send)
 		return dostatus(req, res);
 	}
 
+	d = dirfstat(fd);
+	if(d->mode & DMDIR){
+		strncat(req->uri, "/index.html", PATHMAX);
+		free(d);
+		close(fd);
+		return peek(req, res, send);
+	}
+
 	res->mime = lookupmime(strrchr(req->uri, '.'));
 	res->length = d->length;
 	res->keepalive = 1;
+	free(d);
 
 	sendheader(res);
 	if(send)
